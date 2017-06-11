@@ -1,0 +1,21 @@
+[package]
+name = "telnet-server"
+version = "0.1.0"
+authors = ["Tyler Hall <tylerwhall@gmail.com>"]
+license = "MIT/Apache-2.0"
+readme = "README.md"
+repository = "https://github.com/tylerwhall/telnet-server-rs"
+homepage = "https://github.com/tylerwhall/telnet-server-rs"
+description = "Barebones evented telnet server using tokio"
+
+[dependencies]
+env_logger = "0.4"
+futures = "0.1"
+libc = "0.2"
+log = "0.3"
+mio = "0.6"
+nix = "0.8"
+tokio-core = "0.1"
+tokio-io = "0.1"
+#pty = "0.2"
+pty = { git = "https://github.com/tylerwhall/pty-rs", rev = "e110ae4ff63c8fc38b364bb19493d7637e6b1975" }
