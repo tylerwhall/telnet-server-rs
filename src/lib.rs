@@ -436,12 +436,6 @@ impl<P: Read + Write, S: Read + Write> TelnetConnection<P, S> {
     }
 
     fn handle_stream_tx(&mut self) -> Poll<(), io::Error> {
-        // Send replies before normal data
-        if let Some(ref mut reply) = self.pending_reply {
-            try_ready!(reply.send(&mut self.stream));
-        }
-        self.pending_reply = None;
-
         loop {
             match self.output_state {
                 TelnetOutputState::Normal => {
@@ -481,6 +475,20 @@ impl<P: Read + Write, S: Read + Write> TelnetConnection<P, S> {
             }
         }
     }
+
+    fn handle_reply(&mut self) -> Poll<bool, io::Error> {
+        // Send replies before normal data
+        let ret = if let Some(ref mut reply) = self.pending_reply {
+            trace!("Sending reply");
+            try_ready!(reply.send(&mut self.stream));
+            trace!("Reply sent");
+            true
+        } else {
+            false
+        };
+        self.pending_reply = None;
+        Ok(Async::Ready(ret))
+    }
 }
 
 
@@ -489,8 +497,20 @@ impl<P: Read + Write, S: Read + Write> Future for TelnetConnection<P, S> {
     type Error = io::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
-        trace!("Handle rx");
-        self.handle_stream_rx()?;
+        loop {
+            trace!("Handle rx");
+            // This returns either because its blocked or because there is a
+            // pending reply. We need to drain any pending replies and poll rx
+            // again until either blocking on replies or rx
+            self.handle_stream_rx()?;
+            trace!("Handle reply");
+            if !try_ready!(self.handle_reply()) {
+                break;
+            }
+        }
+
+        // Only do tx if there are no pending replies so they don't get
+        // interleaved with normal data
         trace!("Handle tx");
         self.handle_stream_tx()
     }
