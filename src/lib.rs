@@ -446,16 +446,20 @@ impl<P: Read + Write, S: Read + Write> TelnetConnection<P, S> {
             match self.output_state {
                 TelnetOutputState::Normal => {
                     let (consumed, escape) = {
+                        trace!("Reading from pty");
                         let write_buf = try_ready!(self.pty_reader.borrow_bytes(&mut self.pty));
+                        trace!("Got {} from pty", write_buf.len());
                         // Split the buffer at the first escape
                         let mut iter = write_buf.split(|val| *val == TelnetCommand::IAC as u8);
                         let data = iter.next().unwrap();
                         // Write any data before the escape
                         let consumed = if data.len() > 0 {
+                            trace!("Write {} from pty to stream", data.len());
                             try_nb!(self.stream.write(data))
                         } else {
                             0
                         };
+                        trace!("Wrote {} from pty to stream", data.len());
                         let escape = if let Some(_) = iter.next() {
                             true
                         } else {
@@ -485,7 +489,9 @@ impl<P: Read + Write, S: Read + Write> Future for TelnetConnection<P, S> {
     type Error = io::Error;
 
     fn poll(&mut self) -> Poll<Self::Item, Self::Error> {
+        trace!("Handle rx");
         self.handle_stream_rx()?;
+        trace!("Handle tx");
         self.handle_stream_tx()
     }
 }
