@@ -1,7 +1,7 @@
 extern crate env_logger;
-extern crate telnet;
+extern crate telnet_server;
 
 fn main() {
     env_logger::init().unwrap();
-    telnet::telnet_serve("::0:2323");
+    telnet_server::telnet_serve("::0:2323");
 }
